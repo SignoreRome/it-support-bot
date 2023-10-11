@@ -11,8 +11,8 @@ import (
 )
 
 type RestartRequest struct {
-	ChatId int64  `json:"chatId"`
-	Stand  string `json:"stand"`
+	ChatId  int64  `json:"chatId"`
+	Message string `json:"message"`
 }
 
 func (u *RestartRequest) Bind(r *http.Request) error {
@@ -57,6 +57,8 @@ func main() {
 	wg.Add(1)
 
 	apiToken := env.GetString("TELEGRAM_API_TOKEN", "")
+	restPort := env.GetString("REST_PORT", "3333")
+
 	if apiToken == "" {
 		panic("TELEGRAM_API_TOKEN must be passed")
 	}
@@ -71,21 +73,21 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Post("/restart", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/message", func(w http.ResponseWriter, r *http.Request) {
 		data := &RestartRequest{}
 		if err := render.Bind(r, data); err != nil {
 			render.Render(w, r, ErrInvalidRequest(err))
 			return
 		}
 		chatId := data.ChatId
-		stand := data.Stand
-		msg := tgbotapi.NewMessage(chatId, "Запущено обновление стенда "+stand)
+		message := data.Message
+		msg := tgbotapi.NewMessage(chatId, message)
 		if _, err := bot.Send(msg); err != nil {
 			return
 		}
 	})
 
-	err = http.ListenAndServe(":3333", r)
+	err = http.ListenAndServe(":"+restPort, r)
 	if err != nil {
 		panic(err)
 	}
